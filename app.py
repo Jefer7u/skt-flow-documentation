@@ -49,23 +49,13 @@ T = {
         "footer":                  "Simetrik Flow Docs · v3.0",
         "lang_label":              "Language / Idioma",
         # Disclaimers
-        "disc_privacy_title":  "🔒 Your data never leaves this session",
-        "disc_privacy_body":   (
-            "Uploaded files are processed <strong>entirely in memory</strong> and are never written to disk, "
-            "stored in a database, or transmitted to any external server. "
-            "When you close this tab, all data is discarded automatically. "
-            "<a href='https://github.com' target='_blank' style='color:#EA0050'>View source · PRIVACY.md</a>"
-        ),
-        "disc_output_title":   "⚠️ Disclaimer — generated output",
-        "disc_output_body":    (
-            "The Excel and Word files are generated <strong>algorithmically</strong> from the uploaded JSON. "
-            "Accuracy is not guaranteed. The authors are not liable for decisions made based on this output. "
-            "Always verify against the original platform configuration. "
-            "By downloading, you confirm you are authorized to process this data through a third-party tool."
-        ),
-        "disc_footer_1":       "No data is stored, transmitted, or logged — all processing happens in your browser session.",
-        "disc_footer_2":       "Output is provided for informational purposes only. The authors accept no liability for its accuracy or use.",
-        "disc_footer_3":       "Hosted on Streamlit Community Cloud. See PRIVACY.md for full policy.",
+        "disc_privacy_title":  "🔒 Your files are never stored",
+        "disc_privacy_body":   "Everything runs privately in your browser session. No file is saved, shared, or sent anywhere — feel free to use it.",
+        "disc_output_title":   "",
+        "disc_output_body":    "",
+        "disc_footer_1":       "🔒 Private by design — files are processed in memory and discarded when you close the tab.",
+        "disc_footer_2":       "",
+        "disc_footer_3":       "",
         "theme_label":             "Dark mode",
         # Metrics
         "m_total":    "Total",
@@ -225,23 +215,13 @@ T = {
         "footer":                  "Simetrik Flow Docs · v3.0",
         "lang_label":              "Language / Idioma",
         # Disclaimers
-        "disc_privacy_title":  "🔒 Tus datos no salen de esta sesión",
-        "disc_privacy_body":   (
-            "Los archivos subidos se procesan <strong>íntegramente en memoria</strong> y nunca se escriben a disco, "
-            "se almacenan en una base de datos ni se transmiten a ningún servidor externo. "
-            "Al cerrar esta pestaña, todos los datos se descartan automáticamente. "
-            "<a href='https://github.com' target='_blank' style='color:#EA0050'>Ver código · PRIVACY.md</a>"
-        ),
-        "disc_output_title":   "⚠️ Aviso — contenido generado",
-        "disc_output_body":    (
-            "Los archivos Excel y Word se generan <strong>algorítmicamente</strong> a partir del JSON subido. "
-            "No se garantiza su exactitud. Los autores no son responsables de las decisiones tomadas en base a este output. "
-            "Verificá siempre contra la configuración original de la plataforma. "
-            "Al descargar, confirmás que estás autorizado a procesar estos datos a través de una herramienta de terceros."
-        ),
-        "disc_footer_1":       "No se almacenan, transmiten ni registran datos — todo el procesamiento ocurre en tu sesión de navegador.",
-        "disc_footer_2":       "El output se provee solo con fines informativos. Los autores no aceptan responsabilidad por su exactitud o uso.",
-        "disc_footer_3":       "Alojado en Streamlit Community Cloud. Ver PRIVACY.md para la política completa.",
+        "disc_privacy_title":  "🔒 Tus archivos nunca se guardan",
+        "disc_privacy_body":   "Todo corre de forma privada en tu sesión del navegador. Ningún archivo se almacena, comparte ni envía a ningún lado — podés usarlo con total tranquilidad.",
+        "disc_output_title":   "",
+        "disc_output_body":    "",
+        "disc_footer_1":       "🔒 Privacidad garantizada — los archivos se procesan en memoria y se descartan al cerrar la pestaña.",
+        "disc_footer_2":       "",
+        "disc_footer_3":       "",
         "theme_label":             "Modo oscuro",
         # Metrics
         "m_total":    "Total",
@@ -1184,7 +1164,7 @@ def generar_word(data, selected_ids, lang):
     # ── FOOTER DISCLAIMER ─────────────────────────────────────────────────
     p_disc = doc.add_paragraph()
     _tight(p_disc, space_before=14, space_after=0)
-    run_disc = p_disc.add_run(S["disc_footer_2"])
+    run_disc = p_disc.add_run(S["disc_footer_1"])
     run_disc.font.size  = Pt(7.5)
     run_disc.font.italic = True
     run_disc.font.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
@@ -1772,66 +1752,111 @@ st.markdown(
 )
 
 base_name = os.path.splitext(up.name)[0]
-ts = datetime.now().strftime("%Y-%m-%d_%H%M")
-fname_excel = f"flowdocs_{base_name}_{ts}.xlsx"
-fname_word = f"flowdocs_{base_name}_{ts}.docx"
+ts_key    = f"reports_{up.name}_{n_sel}"   # invalidates if file or selection changes
 
-# Output disclaimer — shown before the generate button
-_disc_bg  = "#1A1500" if dark else "#FFFBEB"
-_disc_bdr = "#3D3000" if dark else "#FDE68A"
-_disc_h   = "#FCD34D" if dark else "#92400E"
-_disc_p   = "#FDE68A" if dark else "#78350F"
-st.markdown(
-    f"<div style='background:{_disc_bg};border:1px solid {_disc_bdr};"
-    f"border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start'>"
-    f"<div><p style='margin:0;font-size:0.85rem;font-weight:600;color:{_disc_h}'>"
-    f"{S['disc_output_title']}</p>"
-    f"<p style='margin:4px 0 0;font-size:0.8rem;color:{_disc_p};line-height:1.5'>"
-    f"{S['disc_output_body']}</p></div></div>",
-    unsafe_allow_html=True,
-)
+# Clear cached reports if the source changed
+if st.session_state.get("_report_key") != ts_key:
+    st.session_state.pop("_excel_bytes", None)
+    st.session_state.pop("_word_bytes",  None)
+    st.session_state.pop("_show_anim",   None)
+    st.session_state["_report_key"] = ts_key
 
 if st.button(S["btn_generate"], type="primary", use_container_width=True):
     prog = st.progress(0, text="Starting…")
     try:
         prog.progress(20, text="Parsing resources…")
-        excel_bytes = generar_excel(data, selected_ids, lang)
-        prog.progress(60, text="Building executive summary…")
-        word_bytes = generar_word(data, selected_ids, lang)
+        excel_io = generar_excel(data, selected_ids, lang)
+        prog.progress(65, text="Building executive summary…")
+        word_io  = generar_word(data, selected_ids, lang)
         prog.progress(100, text="Done.")
-
-        st.success(S["success_msg"].format(n=n_sel))
-
-        dl1, dl2 = st.columns(2)
-        dl1.download_button(
-            label=S["btn_excel"],
-            data=excel_bytes,
-            file_name=fname_excel,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            type="primary",
-        )
-        dl2.download_button(
-            label=S["btn_word"],
-            data=word_bytes,
-            file_name=fname_word,
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            use_container_width=True,
-            type="primary",
-        )
+        # Persist bytes in session_state so download clicks don't lose them
+        st.session_state["_excel_bytes"] = excel_io.read()
+        st.session_state["_word_bytes"]  = word_io.read()
+        st.session_state["_show_anim"]   = True
+        st.session_state["_report_key"]  = ts_key
     except Exception as e:
         prog.empty()
         st.error(f"Error generating reports: {e}")
         import traceback
         st.code(traceback.format_exc())
 
+# ── Show animation once, then persistent download buttons ─────────────────
+if "_excel_bytes" in st.session_state:
+
+    ts      = datetime.now().strftime("%Y-%m-%d_%H%M")
+    f_excel = f"flowdocs_{base_name}_{ts}.xlsx"
+    f_word  = f"flowdocs_{base_name}_{ts}.docx"
+
+    if st.session_state.get("_show_anim"):
+        st.session_state["_show_anim"] = False
+        _anim_msg = ("Documentation ready — download below" if lang == "en"
+                     else "Documentación lista — descargá abajo")
+        st.markdown(f"""
+<style>
+@keyframes _float{{0%,100%{{transform:translateY(0)}}50%{{transform:translateY(-8px)}}}}
+@keyframes _pop{{0%{{transform:scale(0);opacity:0}}70%{{transform:scale(1.08);opacity:1}}100%{{transform:scale(1);opacity:1}}}}
+@keyframes _fadein{{from{{opacity:0;transform:translateY(6px)}}to{{opacity:1;transform:translateY(0)}}}}
+@keyframes _shimmer{{0%{{stroke-dashoffset:160}}100%{{stroke-dashoffset:0}}}}
+.fd-wrap{{display:flex;flex-direction:column;align-items:center;gap:16px;padding:32px 0 24px}}
+.fd-icon{{animation:_float 2.4s ease-in-out infinite}}
+.fd-check{{animation:_pop .5s cubic-bezier(.175,.885,.32,1.275) .2s both}}
+.fd-msg{{animation:_fadein .4s ease .55s both;background:#EA0050;color:#fff;font-family:Inter,sans-serif;
+    font-size:1rem;font-weight:600;padding:10px 28px;border-radius:24px;letter-spacing:.2px}}
+.fd-line{{stroke-dasharray:160;animation:_shimmer .6s ease .1s both}}
+</style>
+<div class="fd-wrap">
+  <div style="position:relative;width:90px;height:90px">
+    <div class="fd-icon">
+      <svg width="90" height="90" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="14" y="8" width="52" height="66" rx="6" fill="#FDF0F3" stroke="#EA0050" stroke-width="2"/>
+        <rect x="22" y="22" width="36" height="3" rx="1.5" fill="#EA0050" opacity=".35"/>
+        <rect x="22" y="30" width="28" height="3" rx="1.5" fill="#EA0050" opacity=".25"/>
+        <rect x="22" y="38" width="32" height="3" rx="1.5" fill="#EA0050" opacity=".25"/>
+        <rect x="22" y="46" width="20" height="3" rx="1.5" fill="#EA0050" opacity=".2"/>
+        <rect x="48" y="8" width="18" height="18" rx="3" fill="#FDF0F3" stroke="#EA0050" stroke-width="2"/>
+        <line x1="48" y1="8" x2="66" y2="26" stroke="#EA0050" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="fd-check" style="position:absolute;bottom:-4px;right:-4px;
+        width:32px;height:32px;border-radius:50%;background:#EA0050;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 4px 12px rgba(234,0,80,.4)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <polyline class="fd-line" points="2,8 6,12 14,4"
+          stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+          stroke-dasharray="160"/>
+      </svg>
+    </div>
+  </div>
+  <div class="fd-msg">{_anim_msg}</div>
+</div>""", unsafe_allow_html=True)
+
+    else:
+        st.success(S["success_msg"].format(n=n_sel))
+
+    dl1, dl2 = st.columns(2)
+    dl1.download_button(
+        label=S["btn_excel"],
+        data=st.session_state["_excel_bytes"],
+        file_name=f_excel,
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+        type="primary",
+    )
+    dl2.download_button(
+        label=S["btn_word"],
+        data=st.session_state["_word_bytes"],
+        file_name=f_word,
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        use_container_width=True,
+        type="primary",
+    )
+
 st.markdown(
     f"<hr style='margin:32px 0;border-color:{TH['border']}'>"
     f"<div style='text-align:center;padding-bottom:24px'>"
-    f"<p style='color:{TH['text2']};font-size:0.78rem;margin:0 0 4px'>Simetrik Flow Docs · v3.0 &nbsp;·&nbsp; MIT License</p>"
-    f"<p style='color:{TH['text3']};font-size:0.75rem;margin:0 0 3px'>{S['disc_footer_1']}</p>"
-    f"<p style='color:{TH['text3']};font-size:0.75rem;margin:0 0 3px'>{S['disc_footer_2']}</p>"
-    f"<p style='color:{TH['text3']};font-size:0.75rem;margin:0'>{S['disc_footer_3']}</p>"
+    f"<p style='color:{TH['text2']};font-size:0.78rem;margin:0 0 6px'>Simetrik Flow Docs · v3.0 &nbsp;·&nbsp; MIT License</p>"
+    f"<p style='color:{TH['text3']};font-size:0.75rem;margin:0'>{S['disc_footer_1']}</p>"
     f"</div>",
     unsafe_allow_html=True,
 )
