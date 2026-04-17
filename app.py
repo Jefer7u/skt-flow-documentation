@@ -46,8 +46,26 @@ T = {
         "no_sel_warning":          "Select at least one resource to continue.",
         "sel_label":               "selected",
         "resources_n":             "resources",
-        "footer":                  "Simetrik Flow Docs · v3.0 · No data is stored or transmitted.",
+        "footer":                  "Simetrik Flow Docs · v3.0",
         "lang_label":              "Language / Idioma",
+        # Disclaimers
+        "disc_privacy_title":  "🔒 Your data never leaves this session",
+        "disc_privacy_body":   (
+            "Uploaded files are processed <strong>entirely in memory</strong> and are never written to disk, "
+            "stored in a database, or transmitted to any external server. "
+            "When you close this tab, all data is discarded automatically. "
+            "<a href='https://github.com' target='_blank' style='color:#EA0050'>View source · PRIVACY.md</a>"
+        ),
+        "disc_output_title":   "⚠️ Disclaimer — generated output",
+        "disc_output_body":    (
+            "The Excel and Word files are generated <strong>algorithmically</strong> from the uploaded JSON. "
+            "Accuracy is not guaranteed. The authors are not liable for decisions made based on this output. "
+            "Always verify against the original platform configuration. "
+            "By downloading, you confirm you are authorized to process this data through a third-party tool."
+        ),
+        "disc_footer_1":       "No data is stored, transmitted, or logged — all processing happens in your browser session.",
+        "disc_footer_2":       "Output is provided for informational purposes only. The authors accept no liability for its accuracy or use.",
+        "disc_footer_3":       "Hosted on Streamlit Community Cloud. See PRIVACY.md for full policy.",
         "theme_label":             "Dark mode",
         # Metrics
         "m_total":    "Total",
@@ -146,7 +164,7 @@ T = {
         "wd_s1":            "Executive Overview",
         "wd_s2":            "Flow Map",
         "wd_s2_note":       "Reading order: left to right, following the data pipeline. Each resource is listed with its direct inputs and outputs.",
-        "wd_s2_col":        ["Resource", "Type", "Inputs", "Outputs"],
+        "wd_s2_col":        ["Resource", "Type", "What it does"],
         "wd_s3":            "Resource Breakdown",
         "wd_s4":            "Observations & Alerts",
         "wd_obs_none":      "No anomalies detected in this flow configuration.",
@@ -204,8 +222,26 @@ T = {
         "no_sel_warning":          "Seleccioná al menos un recurso para continuar.",
         "sel_label":               "seleccionados",
         "resources_n":             "recursos",
-        "footer":                  "Simetrik Flow Docs · v3.0 · No se almacenan ni transmiten datos.",
+        "footer":                  "Simetrik Flow Docs · v3.0",
         "lang_label":              "Language / Idioma",
+        # Disclaimers
+        "disc_privacy_title":  "🔒 Tus datos no salen de esta sesión",
+        "disc_privacy_body":   (
+            "Los archivos subidos se procesan <strong>íntegramente en memoria</strong> y nunca se escriben a disco, "
+            "se almacenan en una base de datos ni se transmiten a ningún servidor externo. "
+            "Al cerrar esta pestaña, todos los datos se descartan automáticamente. "
+            "<a href='https://github.com' target='_blank' style='color:#EA0050'>Ver código · PRIVACY.md</a>"
+        ),
+        "disc_output_title":   "⚠️ Aviso — contenido generado",
+        "disc_output_body":    (
+            "Los archivos Excel y Word se generan <strong>algorítmicamente</strong> a partir del JSON subido. "
+            "No se garantiza su exactitud. Los autores no son responsables de las decisiones tomadas en base a este output. "
+            "Verificá siempre contra la configuración original de la plataforma. "
+            "Al descargar, confirmás que estás autorizado a procesar estos datos a través de una herramienta de terceros."
+        ),
+        "disc_footer_1":       "No se almacenan, transmiten ni registran datos — todo el procesamiento ocurre en tu sesión de navegador.",
+        "disc_footer_2":       "El output se provee solo con fines informativos. Los autores no aceptan responsabilidad por su exactitud o uso.",
+        "disc_footer_3":       "Alojado en Streamlit Community Cloud. Ver PRIVACY.md para la política completa.",
         "theme_label":             "Modo oscuro",
         # Metrics
         "m_total":    "Total",
@@ -305,7 +341,7 @@ T = {
         "wd_s1":            "Resumen Ejecutivo",
         "wd_s2":            "Mapa del Flujo",
         "wd_s2_note":       "Orden de lectura: izquierda a derecha, siguiendo el pipeline de datos. Cada recurso se lista con sus entradas y salidas directas.",
-        "wd_s2_col":        ["Recurso", "Tipo", "Entradas", "Salidas"],
+        "wd_s2_col":        ["Recurso", "Tipo", "Qué hace"],
         "wd_s3":            "Detalle por Recurso",
         "wd_s4":            "Observaciones y Alertas",
         "wd_obs_none":      "No se detectaron anomalías en la configuración de este flujo.",
@@ -832,191 +868,156 @@ def build_relations(resources, nodes, res_map):
     return rels
 
 # ══════════════════════════════════════════════════════════════════════════════
-# EXECUTIVE SUMMARY BUILDER (pure Python, no API)
+# EXECUTIVE SUMMARY BUILDER — one-page, management-level
 # ══════════════════════════════════════════════════════════════════════════════
-def describe_resource_text(r, res_map, col_map, seg_map, meta_map, seg_usage, rels, lang):
-    """Generate a human-readable description for a single resource."""
-    S = T[lang]
-    rt = r.get("resource_type", "")
-    name = r.get("name", "")
-    eid = r.get("export_id")
-    parents_list = rels[eid]["parents"]
-    children_list = rels[eid]["children"]
-    parents_str = ", ".join(parents_list) if parents_list else S["wd_no_parents"]
-    children_str = ", ".join(children_list) if children_list else S["wd_no_children"]
-    no_fil = S["xl_no_filters"]
-    lines = []
+def resource_role_sentence(r, col_map, seg_map, meta_map, lang):
+    """One short sentence describing what a resource does. No technical detail."""
+    rt  = r.get("resource_type", "")
+    no_fil = T[lang]["xl_no_filters"]
 
     if rt == "native":
-        lines.append(S["wd_native_intro"].format(name=name))
-        segs = [s for s in (r.get("segments") or []) if not s.get("default_segment")]
-        if segs:
-            lines.append(S["wd_native_segs"].format(n=len(segs)))
-        if children_list:
-            lines.append(S["wd_native_out"].format(children=children_str))
-        else:
-            lines.append(S["wd_native_no_out"])
+        return (
+            "Ingests raw records directly from the source system."
+            if lang == "en" else
+            "Ingesta registros directamente desde el sistema fuente."
+        )
 
-    elif rt == "source_group":
+    if rt == "source_group":
         sg = r.get("source_group") or {}
         group_cols, agg_vals = parse_source_group(sg, col_map)
-        dims = ", ".join(group_cols) if group_cols else "—"
-        aggs = ", ".join(f"{fn}({col})" for fn, col in agg_vals) if agg_vals else "—"
-        lines.append(S["wd_group_intro"].format(name=name, parents=parents_str))
-        lines.append(S["wd_group_dims"].format(dims=dims))
-        lines.append(S["wd_group_aggs"].format(aggs=aggs))
-        if sg.get("is_accumulative"):
-            lines.append(S["wd_group_accum"])
-        lines.append(S["wd_group_out"].format(children=children_str))
+        dims = ", ".join(group_cols[:3]) + ("…" if len(group_cols) > 3 else "")
+        n_agg = len(agg_vals)
+        if lang == "en":
+            return f"Groups records by {dims or '—'} and computes {n_agg} aggregation(s)."
+        return f"Agrupa registros por {dims or '—'} y calcula {n_agg} agregación(es)."
 
-    elif rt == "source_union":
-        su = r.get("source_union") or {}
-        union_segs = su.get("union_segments") or []
-        lines.append(S["wd_union_intro"].format(name=name, n=len(union_segs)))
-        for us in union_segs:
-            if us.get("is_trigger"):
-                seg_info = seg_map.get(us.get("segment_id")) or {}
-                lines.append("  · " + S["wd_union_trigger"].format(
-                    seg=seg_info.get("name", "?"), res=seg_info.get("resource", "?")))
-        extra = [seg_map.get(us.get("segment_id"), {}).get("name", "?")
-                 for us in union_segs if not us.get("is_trigger")]
-        if extra:
-            lines.append("  · " + S["wd_union_extra"].format(names=", ".join(extra)))
-        lines.append(S["wd_union_out"].format(children=children_str))
+    if rt == "source_union":
+        n = len((r.get("source_union") or {}).get("union_segments") or [])
+        return (
+            f"Merges {n} source segment(s) into a single unified dataset."
+            if lang == "en" else
+            f"Fusiona {n} segmento(s) en un único dataset unificado."
+        )
 
-    elif rt == "reconciliation":
+    if rt == "reconciliation":
         recon = r.get("reconciliation") or {}
-        std = parse_std_reconciliation(recon, res_map, col_map, seg_map, no_fil)
-        if std:
-            lines.append(S["wd_recon_intro"].format(name=name))
-            for side in std["sides"]:
-                trig = " [TRIGGER]" if side["is_trigger"] else ""
-                lines.append("  · " + S["wd_recon_side"].format(
-                    prefix=side["prefix"], trigger=trig,
-                    res=side["resource_name"], seg=side["group_name"]))
-            lines.append(S["wd_recon_rs_n"].format(n=len(std["rule_sets"])))
-            for rs in std["rule_sets"]:
-                rules_str = " | ".join(rs["rules"])
-                lines.append("  · " + S["wd_recon_rs"].format(
-                    pos=rs["pos"], name=rs["name"], rules=rules_str))
-            if std["is_chained"]:
-                lines.append(S["wd_recon_chained"])
-        lines.append(S["wd_recon_out"].format(children=children_str))
+        a_cfg = recon.get("a_source_settings") or {}
+        b_cfg = recon.get("b_source_settings") or {}
+        sa = res_map_placeholder.get(a_cfg.get("resource_id"), "Side A")
+        sb = res_map_placeholder.get(b_cfg.get("resource_id"), "Side B")
+        n_rs = len(recon.get("reconciliation_rule_sets") or [])
+        if lang == "en":
+            return f"Matches '{sa}' against '{sb}' using {n_rs} rule set(s)."
+        return f"Concilia '{sa}' contra '{sb}' con {n_rs} rule set(s)."
 
-    elif rt == "advanced_reconciliation":
-        adv_data = r.get("advanced_reconciliation") or {}
-        adv = parse_adv_reconciliation(adv_data, res_map, col_map, seg_map, meta_map, no_fil)
-        if adv:
-            lines.append(S["wd_adv_intro"].format(name=name, n=len(adv["groups"])))
-            for g in adv["groups"]:
-                vals_preview = ", ".join(g["segments"][:4])
-                if len(g["segments"]) > 4:
-                    vals_preview += "…"
-                lines.append("  · " + S["wd_adv_group"].format(
-                    prefix=g["prefix"], res=g["resource_name"],
-                    seg=g["group_name"], col=g["crit_col"],
-                    vals=vals_preview or S["wd_adv_no_int"]))
-            lines.append(S["wd_adv_rs_n"].format(n=len(adv["rule_sets"])))
-            for rs in adv["rule_sets"]:
-                seg_a = next((s.replace("Side A: ", "") for s in rs["sweep"] if "A:" in s), "—")
-                seg_b = next((s.replace("Side B: ", "") for s in rs["sweep"] if "B:" in s), "—")
-                lines.append("  · " + S["wd_adv_rs"].format(
-                    pos=rs["pos"], name=rs["name"], a=seg_a, b=seg_b))
-        lines.append(S["wd_adv_out"].format(children=children_str))
+    if rt == "advanced_reconciliation":
+        adv = r.get("advanced_reconciliation") or {}
+        n_g = len(adv.get("reconcilable_groups") or [])
+        n_rs = len(adv.get("reconciliation_rule_sets") or [])
+        if lang == "en":
+            return f"Advanced cross-match across {n_g} group(s) using {n_rs} rule set(s)."
+        return f"Conciliación avanzada de {n_g} grupo(s) con {n_rs} rule set(s)."
 
-    else:
-        lines.append(S["wd_generic_intro"].format(name=name, rt=rt.replace("_", " ")))
-        lines.append(S["wd_generic_io"].format(parents=parents_str, children=children_str))
+    if rt == "source_union":
+        n = len((r.get("source_union") or {}).get("union_segments") or [])
+        return (
+            f"Merges {n} source segment(s) into a unified dataset."
+            if lang == "en" else
+            f"Fusiona {n} segmento(s) fuente en un dataset unificado."
+        )
 
-    return lines
+    if rt == "consolidation":
+        return ("Consolidates data from upstream resources."
+                if lang == "en" else "Consolida datos de los recursos upstream.")
+
+    if rt == "cumulative_balance":
+        return ("Computes a cumulative balance from upstream data."
+                if lang == "en" else "Calcula un balance acumulado desde datos upstream.")
+
+    return ("Processes data from upstream resources."
+            if lang == "en" else "Procesa datos de recursos upstream.")
 
 
-def build_overview_text(resources, rels, res_map, lang):
-    S = T[lang]
-    counts = Counter(r.get("resource_type", "") for r in resources)
-    n = len(resources)
-    native = [r.get("name", "") for r in resources if r.get("resource_type") == "native"]
-    recons_std = [r.get("name", "") for r in resources if r.get("resource_type") == "reconciliation"]
-    recons_adv = [r.get("name", "") for r in resources if r.get("resource_type") == "advanced_reconciliation"]
+# module-level placeholder so resource_role_sentence can access res_map
+res_map_placeholder: dict = {}
+
+
+def build_overview_sentences(resources, rels, res_map, lang):
+    """Two-sentence executive overview. No enumeration of technical steps."""
+    counts  = Counter(r.get("resource_type", "") for r in resources)
+    native  = [r.get("name", "") for r in resources if r.get("resource_type") == "native"]
+    recons  = [r.get("name", "") for r in resources
+               if r.get("resource_type") in ("reconciliation", "advanced_reconciliation")]
     terminal = [r.get("name", "") for r in resources if not rels[r.get("export_id")]["children"]]
+    n_middle = len(resources) - len(native) - len(recons)
 
     if lang == "en":
-        parts = [f"This flow comprises {n} documented resource(s) across {len(counts)} functional type(s)."]
-        if native:
-            parts.append(f"Data ingestion starts from {len(native)} native source(s): {', '.join(native)}.")
-        if counts.get("source_union"):
-            parts.append(f"There are {counts['source_union']} source union(s) that consolidate data from multiple groups.")
-        if counts.get("source_group"):
-            parts.append(f"{counts['source_group']} GROUP BY aggregation(s) normalize data granularity before matching.")
-        recon_parts = []
-        if recons_std:
-            recon_parts.append(f"{len(recons_std)} standard reconciliation(s) ({', '.join(recons_std)})")
-        if recons_adv:
-            recon_parts.append(f"{len(recons_adv)} advanced reconciliation(s) ({', '.join(recons_adv)})")
-        if recon_parts:
-            parts.append(f"Reconciliation is performed via {' and '.join(recon_parts)}.")
-        if terminal:
-            parts.append(f"The flow terminates at: {', '.join(terminal)}.")
+        # Sentence 1: what the flow does end-to-end
+        src_part  = f"{len(native)} source(s) ({', '.join(native)})" if native else "upstream sources"
+        mid_part  = f", transforms data through {n_middle} intermediate step(s)," if n_middle > 0 else ""
+        rec_part  = (f" and reconciles it via {', '.join(recons)}" if recons else "")
+        s1 = f"This flow ingests data from {src_part}{mid_part}{rec_part}."
+        # Sentence 2: output / result
+        s2 = (f"The final output is produced by {', '.join(terminal)}."
+              if terminal else
+              "All resources feed into downstream reconciliation processes.")
     else:
-        parts = [f"Este flujo comprende {n} recurso(s) documentado(s) distribuidos en {len(counts)} tipo(s) funcional(es)."]
-        if native:
-            parts.append(f"La ingesta de datos comienza desde {len(native)} fuente(s) nativa(s): {', '.join(native)}.")
-        if counts.get("source_union"):
-            parts.append(f"Hay {counts['source_union']} unión(es) de fuentes que consolidan datos de múltiples grupos.")
-        if counts.get("source_group"):
-            parts.append(f"{counts['source_group']} agrupación(es) GROUP BY normalizan la granularidad de los datos antes del matching.")
-        recon_parts = []
-        if recons_std:
-            recon_parts.append(f"{len(recons_std)} conciliación(es) estándar ({', '.join(recons_std)})")
-        if recons_adv:
-            recon_parts.append(f"{len(recons_adv)} conciliación(es) avanzada(s) ({', '.join(recons_adv)})")
-        if recon_parts:
-            parts.append(f"La conciliación se realiza mediante {' y '.join(recon_parts)}.")
-        if terminal:
-            parts.append(f"El flujo termina en: {', '.join(terminal)}.")
+        src_part  = f"{len(native)} fuente(s) ({', '.join(native)})" if native else "fuentes upstream"
+        mid_part  = f", lo transforma en {n_middle} paso(s) intermedio(s)," if n_middle > 0 else ""
+        rec_part  = (f" y lo concilia a través de {', '.join(recons)}" if recons else "")
+        s1 = f"Este flujo ingesta datos desde {src_part}{mid_part}{rec_part}."
+        s2 = (f"El output final es producido por {', '.join(terminal)}."
+              if terminal else
+              "Todos los recursos alimentan procesos de conciliación downstream.")
 
-    return " ".join(parts)
+    return s1, s2
 
 
-def collect_observations(resources, rels, seg_map, seg_usage, lang):
-    S = T[lang]
+def collect_top_observations(resources, rels, seg_map, seg_usage, lang, max_obs=4):
+    """Return at most max_obs high-priority observations. Business language, no tech detail."""
+    S   = T[lang]
     obs = []
-    seen = set()
+    seen: set = set()
 
-    def add(text):
+    def add(priority, text):
         if text not in seen:
             seen.add(text)
-            obs.append(text)
+            obs.append((priority, text))
 
     for r in resources:
-        eid = r.get("export_id")
+        eid  = r.get("export_id")
         name = r.get("name", "")
-
-        if not rels[eid]["children"] and r.get("resource_type") not in ("reconciliation", "advanced_reconciliation"):
-            add(S["wd_obs_no_child"].format(name=name))
-
         recon = r.get("reconciliation") or {}
-        if recon.get("is_chained"):
-            add(S["wd_obs_chained"].format(name=name))
-        for rs in recon.get("reconciliation_rule_sets", []):
-            if all(rule.get("tolerance", 0) == 0 for rule in (rs.get("reconciliation_rules") or [])):
-                add(S["wd_obs_zero_tol"].format(rs=rs.get("name", "?"), res=name))
 
+        # Priority 1 — chained reconciliation (operational dependency)
+        if recon.get("is_chained"):
+            add(1, S["wd_obs_chained"].format(name=name))
+
+        # Priority 2 — zero tolerance (business risk: any mismatch = break)
+        for rs in recon.get("reconciliation_rule_sets", []):
+            if all(rule.get("tolerance", 0) == 0
+                   for rule in (rs.get("reconciliation_rules") or [])):
+                add(2, S["wd_obs_zero_tol"].format(rs=rs.get("name", "?"), res=name))
+                break   # one alert per resource is enough
+
+        # Priority 3 — unused segments (configuration hygiene)
         for seg in (r.get("segments") or []):
             seg_id = seg.get("export_id")
             if seg_id and not seg_usage.get(seg_id) and not seg.get("default_segment"):
-                add(S["wd_obs_unused_seg"].format(seg=seg.get("name", "?"), res=name))
+                add(3, S["wd_obs_unused_seg"].format(seg=seg.get("name", "?"), res=name))
+                break   # one per resource
 
-    return obs
+    obs.sort(key=lambda x: x[0])
+    return [text for _, text in obs[:max_obs]]
+
 
 # ══════════════════════════════════════════════════════════════════════════════
-# WORD GENERATOR — executive summary document
+# WORD GENERATOR — one-page executive summary
 # ══════════════════════════════════════════════════════════════════════════════
 def _set_cell_bg(cell, hex_color):
-    """Set background color of a Word table cell via OOXML."""
-    tc = cell._tc
+    tc   = cell._tc
     tcPr = tc.get_or_add_tcPr()
-    shd = OxmlElement("w:shd")
+    shd  = OxmlElement("w:shd")
     shd.set(qn("w:val"), "clear")
     shd.set(qn("w:color"), "auto")
     shd.set(qn("w:fill"), hex_color)
@@ -1033,11 +1034,31 @@ def _set_cell_font(cell, size_pt=9, bold=False,
             run.font.color.rgb = RGBColor(*rgb)
 
 
+def _tight(para, space_before=0, space_after=3):
+    """Remove excess paragraph spacing."""
+    para.paragraph_format.space_before = Pt(space_before)
+    para.paragraph_format.space_after  = Pt(space_after)
+
+
+def _section_label(doc, text, rgb=(234, 0, 80)):
+    """Small all-caps section label — replaces H1 to save vertical space."""
+    p = doc.add_paragraph()
+    _tight(p, space_before=10, space_after=3)
+    run = p.add_run(text.upper())
+    run.font.size  = Pt(8)
+    run.font.bold  = True
+    run.font.color.rgb = RGBColor(*rgb)
+    return p
+
+
 def generar_word(data, selected_ids, lang):
+    global res_map_placeholder
     S = T[lang]
+
     all_resources = data.get("resources", [])
-    nodes = data.get("nodes", [])
+    nodes         = data.get("nodes", [])
     res_map, col_map, seg_map, meta_map, seg_usage = build_maps(data)
+    res_map_placeholder = res_map          # expose to resource_role_sentence
 
     seen, resources = set(), []
     for r in all_resources:
@@ -1048,151 +1069,125 @@ def generar_word(data, selected_ids, lang):
     resources.sort(key=sort_key)
     rels = build_relations(resources, nodes, res_map)
 
+    counts  = Counter(r.get("resource_type", "") for r in resources)
+    n_total = len(resources)
+
     doc = Document()
 
-    # Margins
-    for section in doc.sections:
-        section.top_margin = Cm(2.5)
-        section.bottom_margin = Cm(2.5)
-        section.left_margin = Cm(3)
-        section.right_margin = Cm(2.5)
+    # Tight margins to maximise usable space
+    for sec in doc.sections:
+        sec.top_margin    = Cm(2)
+        sec.bottom_margin = Cm(2)
+        sec.left_margin   = Cm(2.5)
+        sec.right_margin  = Cm(2.5)
 
-    # ── COVER ──────────────────────────────────────────────────────────────
-    for _ in range(6):
-        doc.add_paragraph()
+    # ── HEADER BAR (colored table: title | date | resource count) ──────────
+    hdr_tbl = doc.add_table(rows=1, cols=3)
+    hdr_tbl.style = "Table Grid"
 
-    p_title = doc.add_paragraph()
-    p_title.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    r_title = p_title.add_run(S["wd_title"])
-    r_title.font.size = Pt(28)
-    r_title.font.bold = True
-    r_title.font.color.rgb = RGBColor(0xEA, 0x00, 0x50)
+    hdr_data = [
+        S["wd_title"],
+        datetime.now().strftime("%Y-%m-%d  %H:%M"),
+        f"{n_total} {S['wd_res_count'].lower()}",
+    ]
+    hdr_widths = [9, 4, 3]   # approximate column proportions
 
-    p_sub = doc.add_paragraph()
-    r_sub = p_sub.add_run(S["wd_subtitle"])
-    r_sub.font.size = Pt(13)
-    r_sub.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
-
-    doc.add_paragraph()
-
-    p_date = doc.add_paragraph()
-    r_date = p_date.add_run(f"{S['wd_generated']}: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    r_date.font.size = Pt(10)
-    r_date.font.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
-
-    p_count = doc.add_paragraph()
-    r_count = p_count.add_run(f"{S['wd_res_count']}: {len(resources)}")
-    r_count.font.size = Pt(10)
-    r_count.font.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
-
-    doc.add_page_break()
-
-    # ── SECTION 1: EXECUTIVE OVERVIEW ──────────────────────────────────────
-    h1 = doc.add_heading(S["wd_s1"], level=1)
-    for run in h1.runs:
-        run.font.color.rgb = RGBColor(0xEA, 0x00, 0x50)
-
-    overview = build_overview_text(resources, rels, res_map, lang)
-    p = doc.add_paragraph(overview)
-    p.paragraph_format.space_after = Pt(6)
-    for run in p.runs:
-        run.font.size = Pt(11)
-
-    doc.add_paragraph()
-
-    # ── SECTION 2: FLOW MAP ────────────────────────────────────────────────
-    h1 = doc.add_heading(S["wd_s2"], level=1)
-    for run in h1.runs:
-        run.font.color.rgb = RGBColor(0xEA, 0x00, 0x50)
-
-    p_note = doc.add_paragraph(S["wd_s2_note"])
-    for run in p_note.runs:
-        run.font.size = Pt(10)
-        run.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
-    doc.add_paragraph()
-
-    cols_hdr = S["wd_s2_col"]
-    tbl = doc.add_table(rows=1 + len(resources), cols=4)
-    tbl.style = "Table Grid"
-
-    # Header row
-    for i, h_text in enumerate(cols_hdr):
-        cell = tbl.rows[0].cells[i]
-        cell.text = h_text
+    for i, (txt, w) in enumerate(zip(hdr_data, hdr_widths)):
+        cell = hdr_tbl.rows[0].cells[i]
+        cell.text = txt
         _set_cell_bg(cell, "EA0050")
-        _set_cell_font(cell, size_pt=9, bold=True, rgb=(255, 255, 255),
-                       align=WD_ALIGN_PARAGRAPH.CENTER)
+        align = WD_ALIGN_PARAGRAPH.LEFT if i == 0 else WD_ALIGN_PARAGRAPH.RIGHT
+        _set_cell_font(cell, size_pt=10 if i == 0 else 9,
+                       bold=(i == 0), rgb=(255, 255, 255), align=align)
 
-    # Data rows
-    for idx, r in enumerate(resources):
-        eid = r.get("export_id")
-        rt = r.get("resource_type", "")
-        row = tbl.rows[idx + 1]
-        row.cells[0].text = r.get("name", "")
-        row.cells[1].text = get_rt_label(rt, lang)
-        row.cells[2].text = ", ".join(rels[eid]["parents"]) or S["xl_origin"]
-        row.cells[3].text = ", ".join(rels[eid]["children"]) or S["xl_end"]
-        fill = "F9FAFB" if idx % 2 == 0 else "FFFFFF"
-        for cell in row.cells:
-            _set_cell_bg(cell, fill)
-            _set_cell_font(cell, size_pt=9)
+    # ── SUBTITLE ───────────────────────────────────────────────────────────
+    p_sub = doc.add_paragraph(S["wd_subtitle"])
+    _tight(p_sub, space_before=4, space_after=8)
+    for run in p_sub.runs:
+        run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+        run.font.italic = True
 
-    doc.add_page_break()
+    # ── OVERVIEW ───────────────────────────────────────────────────────────
+    _section_label(doc, S["wd_s1"])
+    s1, s2 = build_overview_sentences(resources, rels, res_map, lang)
 
-    # ── SECTION 3: RESOURCE BREAKDOWN ──────────────────────────────────────
-    h1 = doc.add_heading(S["wd_s3"], level=1)
-    for run in h1.runs:
-        run.font.color.rgb = RGBColor(0xEA, 0x00, 0x50)
-
-    for r in resources:
-        rt = r.get("resource_type", "")
-        name = r.get("name", "")
-        rt_label = get_rt_label(rt, lang)
-        color_hex = RT_COLOR.get(rt, "374151")
-        rgb_tuple = tuple(int(color_hex[i:i+2], 16) for i in (0, 2, 4))
-
-        h2 = doc.add_heading(name, level=2)
-        for run in h2.runs:
-            run.font.color.rgb = RGBColor(*rgb_tuple)
-
-        p_type = doc.add_paragraph()
-        r_type = p_type.add_run(rt_label)
-        r_type.font.size = Pt(9)
-        r_type.font.bold = True
-        r_type.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
-
-        lines = describe_resource_text(r, res_map, col_map, seg_map, meta_map, seg_usage, rels, lang)
-        for line in lines:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if stripped.startswith("· "):
-                p_b = doc.add_paragraph(style="List Bullet")
-                r_b = p_b.add_run(stripped[2:])
-                r_b.font.size = Pt(10)
-            else:
-                p_l = doc.add_paragraph(stripped)
-                for run in p_l.runs:
-                    run.font.size = Pt(10)
-
-        doc.add_paragraph()
-
-    # ── SECTION 4: OBSERVATIONS ────────────────────────────────────────────
-    h1 = doc.add_heading(S["wd_s4"], level=1)
-    for run in h1.runs:
-        run.font.color.rgb = RGBColor(0xEA, 0x00, 0x50)
-
-    obs = collect_observations(resources, rels, seg_map, seg_usage, lang)
-    if not obs:
-        p = doc.add_paragraph(S["wd_obs_none"])
+    for sentence in (s1, s2):
+        p = doc.add_paragraph(sentence)
+        _tight(p, space_after=3)
         for run in p.runs:
             run.font.size = Pt(10)
-            run.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
-    else:
+
+    # ── KEY FIGURES (inline compact metrics) ───────────────────────────────
+    p_fig = doc.add_paragraph()
+    _tight(p_fig, space_before=6, space_after=6)
+
+    def _kv(label, val):
+        """Add 'LABEL value  ' to a paragraph."""
+        r1 = p_fig.add_run(f"{label.upper()}: ")
+        r1.font.size  = Pt(8.5)
+        r1.font.bold  = True
+        r1.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+        r2 = p_fig.add_run(f"{val}    ")
+        r2.font.size  = Pt(9)
+        r2.font.bold  = True
+        r2.font.color.rgb = RGBColor(0x1A, 0x1A, 0x2E)
+
+    _kv(S["m_total"],   n_total)
+    _kv(S["m_sources"], counts.get("native", 0))
+    recon_n = counts.get("reconciliation", 0) + counts.get("advanced_reconciliation", 0)
+    _kv(S["m_std"] if lang == "en" else "Conc.", recon_n)
+    _kv(S["m_groups"],  counts.get("source_group", 0))
+
+    # ── FLOW TABLE: Resource | Type | What it does ─────────────────────────
+    _section_label(doc, S["wd_s2"])
+
+    col_headers = S["wd_s2_col"]      # 3-element list now
+    tbl = doc.add_table(rows=1 + len(resources), cols=3)
+    tbl.style = "Table Grid"
+
+    for i, h_text in enumerate(col_headers):
+        cell = tbl.rows[0].cells[i]
+        cell.text = h_text
+        _set_cell_bg(cell, "1A1A2E")
+        _set_cell_font(cell, size_pt=8, bold=True, rgb=(255, 255, 255),
+                       align=WD_ALIGN_PARAGRAPH.LEFT)
+
+    for idx, r in enumerate(resources):
+        eid  = r.get("export_id")
+        rt   = r.get("resource_type", "")
+        row  = tbl.rows[idx + 1]
+        fill = "F4F5F7" if idx % 2 == 0 else "FFFFFF"
+        color_hex = RT_COLOR.get(rt, "374151")
+        rt_rgb    = tuple(int(color_hex[i:i+2], 16) for i in (0, 2, 4))
+
+        row.cells[0].text = r.get("name", "")
+        row.cells[1].text = get_rt_label(rt, lang)
+        row.cells[2].text = resource_role_sentence(r, col_map, seg_map, meta_map, lang)
+
+        for j, cell in enumerate(row.cells):
+            _set_cell_bg(cell, fill)
+            txt_rgb = rt_rgb if j == 1 else (30, 30, 30)
+            bold    = (j == 1)
+            _set_cell_font(cell, size_pt=8.5, bold=bold, rgb=txt_rgb)
+
+    # ── OBSERVATIONS (max 4, high priority only) ───────────────────────────
+    obs = collect_top_observations(resources, rels, seg_map, seg_usage, lang)
+    if obs:
+        _section_label(doc, S["wd_s4"])
         for ob in obs:
-            p_b = doc.add_paragraph(style="List Bullet")
-            r_b = p_b.add_run(ob)
-            r_b.font.size = Pt(10)
+            p_b  = doc.add_paragraph(style="List Bullet")
+            _tight(p_b, space_after=2)
+            r_b  = p_b.add_run(ob)
+            r_b.font.size = Pt(9)
+
+    # ── FOOTER DISCLAIMER ─────────────────────────────────────────────────
+    p_disc = doc.add_paragraph()
+    _tight(p_disc, space_before=14, space_after=0)
+    run_disc = p_disc.add_run(S["disc_footer_2"])
+    run_disc.font.size  = Pt(7.5)
+    run_disc.font.italic = True
+    run_disc.font.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
 
     output = io.BytesIO()
     doc.save(output)
@@ -1595,8 +1590,20 @@ if not up:
   <p style='color:{TH['text']};font-size:1.1rem;font-weight:600;margin:0'>{S['upload_placeholder_h']}</p>
   <p style='color:{TH['text2']};font-size:0.9rem;margin:8px 0 0'>{S['upload_placeholder_p']}</p>
 </div>""", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align:center;color:{TH['text2']};font-size:0.8rem;margin-top:32px'>{S['footer']}</p>",
-                unsafe_allow_html=True)
+    # Privacy notice on empty state
+    st.markdown(
+        f"<div style='background:{'#0D2B0D' if dark else '#F0FDF4'};border:1px solid {'#1A4A1A' if dark else '#BBF7D0'};"
+        f"border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;gap:12px;align-items:flex-start'>"
+        f"<div><p style='margin:0;font-size:0.85rem;font-weight:600;color:{'#4ADE80' if dark else '#166534'}'>"
+        f"{S['disc_privacy_title']}</p>"
+        f"<p style='margin:4px 0 0;font-size:0.8rem;color:{'#86EFAC' if dark else '#15803D'};line-height:1.5'>"
+        f"{S['disc_privacy_body']}</p></div></div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"<p style='text-align:center;color:{TH['text2']};font-size:0.78rem;margin-top:24px'>{S['footer']}</p>",
+        unsafe_allow_html=True,
+    )
     st.stop()
 
 try:
@@ -1769,6 +1776,21 @@ ts = datetime.now().strftime("%Y-%m-%d_%H%M")
 fname_excel = f"flowdocs_{base_name}_{ts}.xlsx"
 fname_word = f"flowdocs_{base_name}_{ts}.docx"
 
+# Output disclaimer — shown before the generate button
+_disc_bg  = "#1A1500" if dark else "#FFFBEB"
+_disc_bdr = "#3D3000" if dark else "#FDE68A"
+_disc_h   = "#FCD34D" if dark else "#92400E"
+_disc_p   = "#FDE68A" if dark else "#78350F"
+st.markdown(
+    f"<div style='background:{_disc_bg};border:1px solid {_disc_bdr};"
+    f"border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start'>"
+    f"<div><p style='margin:0;font-size:0.85rem;font-weight:600;color:{_disc_h}'>"
+    f"{S['disc_output_title']}</p>"
+    f"<p style='margin:4px 0 0;font-size:0.8rem;color:{_disc_p};line-height:1.5'>"
+    f"{S['disc_output_body']}</p></div></div>",
+    unsafe_allow_html=True,
+)
+
 if st.button(S["btn_generate"], type="primary", use_container_width=True):
     prog = st.progress(0, text="Starting…")
     try:
@@ -1803,6 +1825,13 @@ if st.button(S["btn_generate"], type="primary", use_container_width=True):
         import traceback
         st.code(traceback.format_exc())
 
-st.markdown(f"<hr style='margin:32px 0;border-color:{TH['border']}'>"
-            f"<p style='text-align:center;color:{TH['text2']};font-size:0.8rem'>{S['footer']}</p>",
-            unsafe_allow_html=True)
+st.markdown(
+    f"<hr style='margin:32px 0;border-color:{TH['border']}'>"
+    f"<div style='text-align:center;padding-bottom:24px'>"
+    f"<p style='color:{TH['text2']};font-size:0.78rem;margin:0 0 4px'>Simetrik Flow Docs · v3.0 &nbsp;·&nbsp; MIT License</p>"
+    f"<p style='color:{TH['text3']};font-size:0.75rem;margin:0 0 3px'>{S['disc_footer_1']}</p>"
+    f"<p style='color:{TH['text3']};font-size:0.75rem;margin:0 0 3px'>{S['disc_footer_2']}</p>"
+    f"<p style='color:{TH['text3']};font-size:0.75rem;margin:0'>{S['disc_footer_3']}</p>"
+    f"</div>",
+    unsafe_allow_html=True,
+)
